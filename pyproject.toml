@@ -9,6 +9,74 @@ readme = "README.md"
 python = "^3.13"
 
 
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.15.0"
+pre-commit = "^4.2.0"
+pylint-django = "^2.6.1"
+pytest-cov = "^6.0.0"
+pylint = "^3.3.6"
+black = "^25.1.0"
+pytest = "^8.3.5"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pylint.format]
+max-line-length = 79
+
+[tool.isort]
+profile = "black"
+line_length = 79
+lines_after_imports = 2
+combine_as_imports = true
+
+[tool.black]
+line-length = 79
+
+[tool.flake8]
+max-line-length = 79
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B311", "B324"]
+
+[tool.bandit.assert_used]
+skips = ["tests/*"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = true
+skip_empty = true
+
+[tool.mypy]
+explicit_package_bases = true
+mypy_path = ["."]
+check_untyped_defs = true
+exclude = []
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+no_implicit_optional = true
+no_implicit_reexport = true
+extra_checks = true
+strict_equality = true
+strict_optional = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[tool.autoflake]
+remove-all-unused-imports = true
+remove-unused-variables = true
+
+[tool.pyupgrade]
+py311-plus = true
