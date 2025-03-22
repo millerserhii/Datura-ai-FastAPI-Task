@@ -7,8 +7,117 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.13"
+fastapi = "^0.115.11"
+uvicorn = {extras = ["standard"], version = "^0.34.0"}
+pydantic = "^2.10.6"
+pydantic-settings = "^2.8.1"
+redis = "^5.2.1"
+celery = "^5.4.0"
+sqlalchemy = "^2.0.39"
+alembic = "^1.15.1"
+asyncpg = "^0.30.0"
+sqlmodel = "^0.0.24"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+aiohttp = "^3.11.14"
 
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.15.0"
+pre-commit = "^4.2.0"
+pylint-django = "^2.6.1"
+pytest-cov = "^6.0.0"
+pylint = "^3.3.6"
+black = "^25.1.0"
+pytest = "^8.3.5"
+pytest-asyncio = "^0.25.3"
+pytest-mock = "^3.14.0"
+httpx = "^0.28.1"
+ruff = "^0.11.2"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pylint.main]
+init-hook='import sys; sys.path.append(".")'
+
+[tool.pylint.basic]
+good-names-rgxs = [".\\d?"]
+
+[tool.pylint.format]
+max-line-length = 79
+
+[tool.pylint."messages control"]
+max-args = 7
+max-parents = 10
+max-positional-arguments=10
+disable = [
+  "duplicate-code",
+  "fixme",
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "missing-module-docstring",
+  "too-few-public-methods",
+  "unsubscriptable-object",
+  "unnecessary-dunder-call",
+  "too-many-ancestors",
+  "redefined-outer-name",
+  "abstract-method",
+  "protected-access",
+]
+
+[tool.isort]
+profile = "black"
+line_length = 79
+lines_after_imports = 2
+combine_as_imports = true
+
+[tool.black]
+line-length = 79
+
+[tool.flake8]
+max-line-length = 79
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B311", "B324", "B104"]
+
+[tool.bandit.assert_used]
+skips = ["tests/*"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = true
+skip_empty = true
+
+[tool.mypy]
+explicit_package_bases = true
+mypy_path = ["."]
+check_untyped_defs = true
+exclude = []
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+no_implicit_optional = true
+no_implicit_reexport = true
+extra_checks = true
+strict_equality = true
+strict_optional = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[tool.autoflake]
+remove-all-unused-imports = true
+remove-unused-variables = true
+
+[tool.pyupgrade]
+py311-plus = true

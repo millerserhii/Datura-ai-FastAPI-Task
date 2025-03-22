@@ -1,0 +1,84 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --workers 2
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      PORT: 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    ports:
+      - "8000:8000"
+    pull_policy: always
+    restart: always
+    volumes:
+      - ./:/app
+      - /etc/localtime:/etc/localtime:ro
+
+  celery_worker:
+    build: .
+    command: celery -A src.tasks.worker worker --loglevel=info --pool=threads
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - .env
+    pull_policy: always
+    restart: always
+    volumes:
+      - ./:/app
+      - /etc/localtime:/etc/localtime:ro
+
+  db:
+    image: postgres:17-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME:-app}
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRESQL_MAX_CONNECTIONS: 50
+      SHARED_BUFFERS: 128MB
+    healthcheck:
+      test: pg_isready -U ${DB_USER:-user} -d ${DB_NAME:-app}
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${DB_EXTERNAL_PORT:-5432}:5432"
+    pull_policy: always
+    restart: always
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+
+  redis:
+    image: redis:alpine
+    command: --requirepass ${REDIS_PASSWORD:-password}
+    healthcheck:
+      test: redis-cli -a ${REDIS_PASSWORD:-password} ping | grep "^PONG$"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${REDIS_EXTERNAL_PORT:-6379}:6379"
+    pull_policy: always
+    restart: always
+    volumes:
+      - redis_data:/data
+      - /etc/localtime:/etc/localtime:ro
+
+volumes:
+  pgdata:
+  redis_data:
