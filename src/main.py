@@ -1,12 +1,15 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.api.router import api_router
+from src.database import init_db
 from src.config import settings
 from src.exceptions import CustomException
+from src.middleware import setup_request_logging_middleware
 
 
 # Configure logging
@@ -15,6 +18,15 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup code (runs before application starts)
+    await init_db()
+    yield
+    # Shutdown code (runs when application is shutting down)
+    # Add any cleanup code here if needed
 
 
 def create_app() -> FastAPI:
@@ -42,9 +54,20 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    setup_request_logging_middleware(
+        app,
+        exclude_paths=[
+            "/health",
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+            "/static",
+        ],
+    )
+
     # Include API router
     app.include_router(api_router, prefix=settings.API_PREFIX)
-
+    
     # Add exception handlers
     @app.exception_handler(CustomException)
     async def custom_exception_handler(

@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --workers 2
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       db:
         condition: service_healthy
@@ -20,8 +20,6 @@ services:
       retries: 3
     ports:
       - "8000:8000"
-    pull_policy: always
-    restart: always
     volumes:
       - ./:/app
       - /etc/localtime:/etc/localtime:ro
@@ -34,8 +32,6 @@ services:
         condition: service_healthy
     env_file:
       - .env
-    pull_policy: always
-    restart: always
     volumes:
       - ./:/app
       - /etc/localtime:/etc/localtime:ro
@@ -57,8 +53,6 @@ services:
       retries: 5
     ports:
       - "${DB_EXTERNAL_PORT:-5432}:5432"
-    pull_policy: always
-    restart: always
     volumes:
       - pgdata:/var/lib/postgresql/data
       - /etc/localtime:/etc/localtime:ro
@@ -73,8 +67,6 @@ services:
       retries: 5
     ports:
       - "${REDIS_EXTERNAL_PORT:-6379}:6379"
-    pull_policy: always
-    restart: always
     volumes:
       - redis_data:/data
       - /etc/localtime:/etc/localtime:ro

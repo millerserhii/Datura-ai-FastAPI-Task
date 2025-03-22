@@ -63,14 +63,16 @@ class Settings(BaseSettings):
                 else self.DB_PASSWORD
             )
 
+
             self.DATABASE_URL = PostgresDsn.build(
                 scheme="postgresql+asyncpg",
                 username=self.DB_USER,
                 password=password,
                 host=self.DB_HOST,
                 port=self.DB_PORT,
-                path=f"/{self.DB_NAME or ''}",
+                path=self.DB_NAME,
             )
+            print(self.DATABASE_URL)
         return self
 
     @model_validator(mode="after")
