@@ -1,9 +1,8 @@
 import logging
 import uuid
-from datetime import datetime
-from typing import List, Optional, Union
+from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.blockchain.models import DividendHistory, StakeTransaction
@@ -55,8 +54,10 @@ class BlockchainRepository:
         await self.session.refresh(transaction)
 
         logger.info(
-            f"Created {transaction.operation_type} transaction record for "
-            f"hotkey={transaction.hotkey}, amount={transaction.amount}"
+            "Created %s transaction record for hotkey=%s, amount=%s",
+            transaction.operation_type,
+            transaction.hotkey,
+            transaction.amount,
         )
 
         return transaction
@@ -68,7 +69,7 @@ class BlockchainRepository:
         operation_type: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[StakeTransaction]:
+    ) -> list[StakeTransaction]:
         """
         Get stake transactions with optional filters.
 
@@ -83,18 +84,22 @@ class BlockchainRepository:
             List[StakeTransaction]: List of stake transactions
         """
         query = select(StakeTransaction).order_by(
-            StakeTransaction.timestamp.desc()
+            desc(StakeTransaction.timestamp)  # type: ignore[arg-type]
         )
 
         if netuid is not None:
-            query = query.where(StakeTransaction.netuid == netuid)
+            query = query.where(
+                StakeTransaction.netuid == netuid  # type: ignore[arg-type]
+            )
 
         if hotkey:
-            query = query.where(StakeTransaction.hotkey == hotkey)
+            query = query.where(
+                StakeTransaction.hotkey == hotkey  # type: ignore[arg-type]
+            )
 
         if operation_type:
             query = query.where(
-                StakeTransaction.operation_type == operation_type
+                StakeTransaction.operation_type == operation_type  # type: ignore[arg-type] # noqa: E501 # pylint: disable=line-too-long
             )
 
         query = query.limit(limit).offset(offset)
@@ -127,8 +132,10 @@ class BlockchainRepository:
         await self.session.refresh(history)
 
         logger.debug(
-            f"Recorded dividend history for netuid={history.netuid}, "
-            f"hotkey={history.hotkey}, value={history.dividend_value}"
+            "Recorded dividend history for netuid=%s, hotkey=%s, value=%s",
+            history.netuid,
+            history.hotkey,
+            history.dividend_value,
         )
 
         return history
@@ -139,7 +146,7 @@ class BlockchainRepository:
         hotkey: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[DividendHistory]:
+    ) -> list[DividendHistory]:
         """
         Get dividend history with optional filters.
 
@@ -153,14 +160,18 @@ class BlockchainRepository:
             List[DividendHistory]: List of dividend history records
         """
         query = select(DividendHistory).order_by(
-            DividendHistory.timestamp.desc()
+            desc(DividendHistory.timestamp)  # type: ignore[arg-type]
         )
 
         if netuid is not None:
-            query = query.where(DividendHistory.netuid == netuid)
+            query = query.where(
+                DividendHistory.netuid == netuid  # type: ignore[arg-type]
+            )
 
         if hotkey:
-            query = query.where(DividendHistory.hotkey == hotkey)
+            query = query.where(
+                DividendHistory.hotkey == hotkey  # type: ignore[arg-type]
+            )
 
         query = query.limit(limit).offset(offset)
 

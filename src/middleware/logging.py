@@ -2,7 +2,8 @@ import json
 import logging
 import time
 import uuid
-from typing import Any, Callable, List, Optional
+from collections.abc import Callable
+from typing import Any, Optional
 
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -12,12 +13,15 @@ logger = logging.getLogger("api.request")
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """Middleware for logging request and response details in a single log entry."""
+    """
+    Middleware for logging request and
+    response details in a single log entry.
+    """
 
     def __init__(
         self,
         app: Any,
-        exclude_paths: Optional[List[str]] = None,
+        exclude_paths: Optional[list[str]] = None,
     ):
         super().__init__(app)
         self.exclude_paths = exclude_paths or [
@@ -28,9 +32,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         ]
 
     async def dispatch(
-        self, request: Request, call_next: Callable
+        self, request: Request, call_next: Callable[..., Any]
     ) -> Response:
-        """Process request and log details in a single entry after completion."""
+        """
+        Process request and log details in
+        a single entry after completion.
+        """
         # Skip excluded paths
         if any(
             request.url.path.startswith(path) for path in self.exclude_paths
@@ -48,7 +55,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         method = request.method
         path = request.url.path
         client_ip = request.client.host if request.client else None
-        user_agent = request.headers.get("user-agent", "")
+        request.headers.get("user-agent", "")
 
         # Process the request and capture body info if needed
         body_info = ""
@@ -65,7 +72,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
                 # Reset the request body
                 await request.body()
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 body_info = " | Body: [Error reading]"
 
         try:
@@ -92,7 +99,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             )
 
             # Log a single entry with all the information
-            logger.log(
+            logger.log(  # pylint: disable=W1203
                 log_level,
                 f"{method} {path} | "
                 f"Status: {response.status_code} | "
@@ -103,13 +110,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
             return response
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             # Calculate processing time for failed requests
             process_time = time.time() - start_time
             process_time_ms = round(process_time * 1000, 2)
 
             # Log exception as a single entry
-            logger.exception(
+            logger.exception(  # pylint: disable=W1203
                 f"{method} {path} | "
                 f"Error: {str(e)} | "
                 f"Time: {process_time_ms}ms | "
@@ -123,7 +130,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 def setup_request_logging_middleware(
     app: FastAPI,
-    exclude_paths: Optional[List[str]] = None,
+    exclude_paths: Optional[list[str]] = None,
 ) -> None:
     """Add request logging middleware to FastAPI app."""
     app.add_middleware(

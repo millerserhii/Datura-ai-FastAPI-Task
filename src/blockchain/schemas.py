@@ -1,4 +1,5 @@
-from typing import List, Optional
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -7,7 +8,7 @@ class TaoDividend(BaseModel):
 
     netuid: int
     hotkey: str
-    dividend: int
+    dividend: float
     cached: bool = False
     stake_tx_triggered: bool = False
     tx_hash: Optional[str] = None
@@ -16,12 +17,12 @@ class TaoDividend(BaseModel):
 class TaoDividendsBatch(BaseModel):
     """Multiple Tao dividends model."""
 
-    dividends: List[TaoDividend] = Field(default_factory=list)
+    dividends: list[TaoDividend] = Field(default_factory=list)
     cached: bool = False
     stake_tx_triggered: bool = False
 
     @property
-    def total_dividend(self) -> int:
+    def total_dividend(self) -> float:
         """Calculate total dividend."""
         return sum(dividend.dividend for dividend in self.dividends)
 

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 import bittensor
 from bittensor.core.async_subtensor import AsyncSubtensor
@@ -30,19 +30,21 @@ class BitensorClient:
         """Connect to the Bittensor blockchain."""
         if self._subtensor is None:
             try:
-
                 self._subtensor = AsyncSubtensor(
                     network=self.network,
                     log_verbose=True,
                 )
 
                 logger.info(
-                    f"Created AsyncSubtensor client for {self.network}"
+                    "Created AsyncSubtensor client for %s",
+                    self.network,
                 )
 
             except Exception as e:
-                logger.error(f"Failed to connect to Bittensor: {e}")
-                raise BlockchainError(f"Failed to connect to Bittensor: {e}")
+                logger.error("Failed to connect to Bittensor: %s", e)
+                raise BlockchainError(
+                    f"Failed to connect to Bittensor: {e}"
+                ) from e
         return self._subtensor
 
     def get_wallet(self) -> Any:
@@ -62,18 +64,21 @@ class BitensorClient:
                     )
 
                 logger.info(
-                    f"Initialized wallet {self.wallet_name}:{self.wallet_hotkey}"
+                    "Initialized wallet %s:%s",
+                    self.wallet_name,
+                    self.wallet_hotkey,
                 )
 
             except Exception as e:
-                logger.error(f"Failed to initialize wallet: {e}")
-                raise BlockchainError(f"Failed to initialize wallet: {e}")
+                logger.error("Failed to initialize wallet: %s", e)
+                raise BlockchainError(
+                    f"Failed to initialize wallet: {e}"
+                ) from e
         return self._wallet
-
 
     async def get_tao_dividends(
         self, netuid: Optional[int] = None, hotkey: Optional[str] = None
-    ) -> Union[TaoDividend, List[TaoDividend]]:
+    ) -> Union[TaoDividend, list[TaoDividend]]:
         """
         Get Tao dividends for the given netuid and hotkey.
 
@@ -122,13 +127,15 @@ class BitensorClient:
                                 )
                             )
 
-                            # If we found the specific hotkey, we can break the loop
+                            # If we found the specific hotkey, break
                             if hotkey is not None:
                                 break
 
-                except Exception as e:
+                except (ValueError, AttributeError, TypeError) as ex:
                     logger.warning(
-                        f"Failed to get dividends for netuid {current_netuid}: {e}"
+                        "Failed to get dividends for netuid %s: %s",
+                        current_netuid,
+                        ex,
                     )
                     # Continue with other netuids
 
@@ -141,21 +148,25 @@ class BitensorClient:
 
             # If we didn't find any dividends, return a default one
             if hotkey is not None:
+                netuid_value = (
+                    netuid if netuid is not None else self.default_netuid
+                )
                 return TaoDividend(
-                    netuid=(
-                        netuid if netuid is not None else self.default_netuid
-                    ),
+                    netuid=netuid_value,
                     hotkey=hotkey,
                     dividend=0,
                     cached=False,
                 )
-            return []
+            return []  # type: ignore[unreachable]
 
         except Exception as e:
             logger.error(
-                f"Failed to get Tao dividends for netuid={netuid}, hotkey={hotkey}: {e}"
+                "Failed to get Tao dividends for netuid=%s, hotkey=%s: %s",
+                netuid,
+                hotkey,
+                e,
             )
-            raise BlockchainError(f"Failed to get Tao dividends: {e}")
+            raise BlockchainError(f"Failed to get Tao dividends: {e}") from e
 
     async def stake(
         self,
@@ -194,8 +205,12 @@ class BitensorClient:
                 raise BlockchainError(f"Failed to stake: {tx_hash}")
 
             logger.info(
-                f"Successfully staked {amount} TAO to {hotkey} on subnet {netuid}. "
-                f"Transaction hash: {tx_hash}"
+                "Successfully staked %s TAO to %s on subnet %s. "
+                "Transaction hash: %s",
+                amount,
+                hotkey,
+                netuid,
+                tx_hash,
             )
 
             return StakeOperation(
@@ -206,8 +221,13 @@ class BitensorClient:
                 success=success,
             )
 
-        except Exception as e:
-            logger.error(f"Failed to stake {amount} TAO to {hotkey}: {e}")
+        except (BlockchainError, ValueError, RuntimeError) as e:
+            logger.error(
+                "Failed to stake %s TAO to %s: %s",
+                amount,
+                hotkey,
+                e,
+            )
             return StakeOperation(
                 hotkey=hotkey,
                 amount=amount,
@@ -253,8 +273,12 @@ class BitensorClient:
                 raise BlockchainError(f"Failed to unstake: {tx_hash}")
 
             logger.info(
-                f"Successfully unstaked {amount} TAO from {hotkey} on subnet {netuid}. "
-                f"Transaction hash: {tx_hash}"
+                "Successfully unstaked %s TAO from %s on subnet %s. "
+                "Transaction hash: %s",
+                amount,
+                hotkey,
+                netuid,
+                tx_hash,
             )
 
             return StakeOperation(
@@ -265,8 +289,13 @@ class BitensorClient:
                 success=success,
             )
 
-        except Exception as e:
-            logger.error(f"Failed to unstake {amount} TAO from {hotkey}: {e}")
+        except (BlockchainError, ValueError, RuntimeError) as e:
+            logger.error(
+                "Failed to unstake %s TAO from %s: %s",
+                amount,
+                hotkey,
+                e,
+            )
             return StakeOperation(
                 hotkey=hotkey,
                 amount=amount,

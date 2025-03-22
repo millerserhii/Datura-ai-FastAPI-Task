@@ -1,6 +1,7 @@
 import json
 import logging
-from typing import List, Optional, Union, cast
+import uuid
+from typing import Optional, Union
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -58,20 +59,17 @@ class BlockchainService:
                     dividends_batch = TaoDividendsBatch.model_validate(data)
                     dividends_batch.cached = True
                     return dividends_batch
-                else:
-                    dividend = TaoDividend.model_validate(data)
-                    dividend.cached = True
-                    return dividend
-            except Exception as e:
-                logger.error(f"Failed to parse cached dividend data: {e}")
+                dividend = TaoDividend.model_validate(data)
+                dividend.cached = True
+                return dividend
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                logger.error("Failed to parse cached dividend data: %s", e)
                 # Continue to fetch from blockchain if cache parsing fails
 
         # If not in cache, fetch from blockchain
         try:
             result = await bittensor_client.get_tao_dividends(netuid, hotkey)
-
-            # Cache the result
-            if isinstance(result, list):
+            if isinstance(result, list):  # pylint: disable=no-else-return
                 batch = TaoDividendsBatch(dividends=result)
                 await redis_client.set_object(cache_key, batch)
 
@@ -91,8 +89,8 @@ class BlockchainService:
                 return result
 
         except Exception as e:
-            logger.error(f"Failed to get Tao dividends: {e}")
-            raise BlockchainError(f"Failed to get Tao dividends: {e}")
+            logger.error("Failed to get Tao dividends: %s", e)
+            raise BlockchainError(f"Failed to get Tao dividends: {e}") from e
 
     async def stake(
         self,
@@ -100,7 +98,7 @@ class BlockchainService:
         hotkey: Optional[str] = None,
         netuid: Optional[int] = None,
         sentiment_score: Optional[int] = None,
-        sentiment_analysis_id: Optional[str] = None,
+        sentiment_analysis_id: Optional[uuid.UUID] = None,
     ) -> StakeOperation:
         """
         Stake TAO to a hotkey.
@@ -142,7 +140,7 @@ class BlockchainService:
         hotkey: Optional[str] = None,
         netuid: Optional[int] = None,
         sentiment_score: Optional[int] = None,
-        sentiment_analysis_id: Optional[str] = None,
+        sentiment_analysis_id: Optional[uuid.UUID] = None,
     ) -> StakeOperation:
         """
         Unstake TAO from a hotkey.
@@ -204,7 +202,7 @@ class BlockchainService:
         operation_type: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[StakeTransaction]:
+    ) -> list[StakeTransaction]:
         """
         Get stake transaction history.
 
@@ -235,7 +233,7 @@ class BlockchainService:
         hotkey: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[DividendHistory]:
+    ) -> list[DividendHistory]:
         """
         Get dividend history.
 
