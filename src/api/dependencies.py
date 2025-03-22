@@ -20,8 +20,8 @@ async def get_api_key(api_key_header: str = API_KEY_SECURITY) -> str:
     else:
         token = api_key_header
 
-    # Validate the token
-    if token != settings.API_AUTH_TOKEN:
+    # Validate the token - get the actual string value from SecretStr
+    if token != settings.API_AUTH_TOKEN.get_secret_value():
         raise AuthenticationError(detail="Invalid API key")
 
     return token
