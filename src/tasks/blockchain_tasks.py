@@ -50,54 +50,59 @@ def trigger_sentiment_analysis_and_stake(
     # Create a task that will run in an async environment
     async def process_sentiment_and_stake() -> dict[str, Any]:
         try:
-            # Get tweets about the subnet
-            sentiment_service = SentimentAnalysisService(
-                datura_api_key=datura_api_key, chutes_api_key=chutes_api_key
-            )
-            tweets = await sentiment_service.search_tweets(effective_netuid)
-
-            if not tweets:
-                logger.warning(
-                    "No tweets found for netuid=%s", effective_netuid
-                )
-                return {
-                    "task_id": task_id,
-                    "netuid": effective_netuid,
-                    "status": "completed",
-                    "message": "No tweets found for sentiment analysis",
-                    "sentiment_score": 0,
-                    "operation": "none",
-                    "amount": 0,
-                    "success": True,
-                }
-
-            # Analyze sentiment
-            sentiment_result = await sentiment_service.analyze_sentiment(
-                tweets, effective_netuid
-            )
-            logger.info(sentiment_result)
-            sentiment_id = uuid.uuid4()
-
-            # Skip staking if sentiment is neutral
-            if sentiment_result.operation_type == "none":
-                logger.info(
-                    "Neutral sentiment (%s) for netuid=%s, skipping stake/unstake",
-                    sentiment_result.score,
-                    effective_netuid,
-                )
-                return {
-                    "task_id": task_id,
-                    "netuid": effective_netuid,
-                    "status": "completed",
-                    "message": "Neutral sentiment, no action taken",
-                    "sentiment_score": sentiment_result.score,
-                    "operation": "none",
-                    "amount": 0,
-                    "success": True,
-                }
-
-            # Get blockchain service with session
             async with async_session() as session:
+                # Get tweets about the subnet
+                sentiment_service = SentimentAnalysisService(
+                    datura_api_key=datura_api_key,
+                    chutes_api_key=chutes_api_key,
+                    session=session,
+                )
+                tweets = await sentiment_service.search_tweets(
+                    effective_netuid
+                )
+
+                if not tweets:
+                    logger.warning(
+                        "No tweets found for netuid=%s", effective_netuid
+                    )
+                    return {
+                        "task_id": task_id,
+                        "netuid": effective_netuid,
+                        "status": "completed",
+                        "message": "No tweets found for sentiment analysis",
+                        "sentiment_score": 0,
+                        "operation": "none",
+                        "amount": 0,
+                        "success": True,
+                    }
+
+                # Analyze sentiment
+                sentiment_result = await sentiment_service.analyze_sentiment(
+                    tweets, effective_netuid
+                )
+                logger.info(sentiment_result)
+                sentiment_id = uuid.uuid4()
+
+                # Skip staking if sentiment is neutral
+                if sentiment_result.operation_type == "none":
+                    logger.info(
+                        "Neutral sentiment (%s) for netuid=%s, skipping stake/unstake",
+                        sentiment_result.score,
+                        effective_netuid,
+                    )
+                    return {
+                        "task_id": task_id,
+                        "netuid": effective_netuid,
+                        "status": "completed",
+                        "message": "Neutral sentiment, no action taken",
+                        "sentiment_score": sentiment_result.score,
+                        "operation": "none",
+                        "amount": 0,
+                        "success": True,
+                    }
+
+                # Get blockchain service with session
+
                 service = await get_blockchain_service(session)
 
                 # Perform stake or unstake based on sentiment

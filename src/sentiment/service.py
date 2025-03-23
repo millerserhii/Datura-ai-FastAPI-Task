@@ -1,10 +1,13 @@
 import logging
+from typing import Optional
 
 import aiohttp
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.exceptions import ExternalAPIError
 from src.sentiment.schemas import SentimentResult
+from src.sentiment.repository import SentimentAnalysisRepository
 
 
 logger = logging.getLogger(__name__)
@@ -48,8 +51,9 @@ class Tweet(BaseModel):
 class SentimentAnalysisService:
     """Service for Twitter sentiment analysis."""
 
-    def __init__(self, datura_api_key: str, chutes_api_key: str):
+    def __init__(self, datura_api_key: str, chutes_api_key: str, session: Optional[AsyncSession] = None, ):
         """Initialize service."""
+        self.session = session
         self.datura_api_key = datura_api_key
         self.chutes_api_key = chutes_api_key
         self.datura_base_url = "https://apis.datura.ai"
@@ -283,6 +287,15 @@ class SentimentAnalysisService:
                         operation_type=operation_type,
                         stake_amount=stake_amount,
                     )
+
+                    if self.session:
+                        sentiment_repo = SentimentAnalysisRepository(
+                            self.session
+                        )
+                        await sentiment_repo.create_sentiment_analysis(
+                            result=result,
+                            tweets_text=combined_text,  # Pass the tweets text for reference
+                        )
 
                     logger.info(
                         "Sentiment analysis for subnet %s: %s (%s)",
