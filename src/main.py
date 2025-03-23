@@ -11,6 +11,7 @@ from src.config import settings
 from src.database import init_db
 from src.exceptions import CustomException
 from src.middleware import setup_request_logging_middleware
+from src.tasks.test_task import test_task
 
 
 # Configure logging
@@ -80,6 +81,14 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["Health"])
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/celery-health", tags=["Celery Health"])
+    async def celery_health() -> dict[str, str]:
+        # Test Celery task
+        task = test_task.delay()
+        task_id = task.id
+        logger.info(f"Triggered test task (ID: {task_id})")
+        return {"status": "ok", "task_id": task_id}
 
     return app
 

@@ -71,7 +71,6 @@ class Settings(BaseSettings):
                 port=self.DB_PORT,
                 path=self.DB_NAME,
             )
-            print(self.DATABASE_URL)
         return self
 
     @model_validator(mode="after")

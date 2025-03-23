@@ -6,6 +6,9 @@ from celery import Celery
 from src.config import settings
 
 
+print("==== WORKER MODULE LOADING ====")
+
+
 logger = logging.getLogger(__name__)
 
 # Explicitly format the Redis URL to ensure proper authentication
@@ -30,6 +33,7 @@ celery_app = Celery(
 
 # Configure Celery
 celery_app.conf.update(
+    broker_transport="redis",
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",
@@ -48,7 +52,7 @@ celery_app.conf.update(
 
 # Import task modules
 try:
-    from src.tasks import blockchain_tasks, sentiment_tasks  # noqa
+    from src.tasks import blockchain_tasks, sentiment_tasks, test_task  # noqa
 
     logger.info("Celery worker initialized with tasks")
 except ImportError:

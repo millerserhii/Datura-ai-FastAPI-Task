@@ -2,6 +2,7 @@ import logging
 from typing import Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from kombu.exceptions import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import get_api_key
@@ -98,7 +99,7 @@ async def get_tao_dividends(
                 else:
                     result.stake_tx_triggered = True
 
-            except ConnectionError as e:
+            except (OperationalError, ConnectionError) as e:
                 # Handle connection errors gracefully
                 logger.error(f"Failed to connect to Celery broker: {str(e)}")
                 # Still return data even if background task fails

@@ -3,26 +3,17 @@ import logging
 import uuid
 from typing import Any, Optional
 
-from celery import shared_task
-from requests.exceptions import ConnectionError as RequestsConnectionError
-
 from src.blockchain.service import get_blockchain_service
 from src.config import settings
 from src.database import async_session
 from src.sentiment.service import sentiment_service
+from src.tasks.worker import celery_app
 
 
 logger = logging.getLogger(__name__)
 
 
-@shared_task(
-    bind=True,
-    name="trigger_sentiment_analysis_and_stake",
-    autoretry_for=(RequestsConnectionError,),
-    retry_backoff=60,
-    max_retries=3,
-    queue="sentiment",
-)
+@celery_app.task(name="trigger_sentiment_analysis_and_stake")
 def trigger_sentiment_analysis_and_stake(
     self, netuid: Optional[int] = None
 ) -> dict[str, Any]:
