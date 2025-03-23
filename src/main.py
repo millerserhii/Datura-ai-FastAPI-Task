@@ -94,4 +94,6 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=settings.PORT,
         reload=settings.DEBUG,
+        log_level="debug",
+        use_colors=True
     )

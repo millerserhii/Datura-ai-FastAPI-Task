@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 from starlette.middleware.base import BaseHTTPMiddleware
 
+
 # Set up rich console
 console = Console()
 
@@ -18,7 +19,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(message)s",
     datefmt="[%X]",
-    handlers=[RichHandler(rich_tracebacks=True, console=console)]
+    handlers=[RichHandler(rich_tracebacks=True, console=console)],
 )
 
 logger = logging.getLogger("api.request")
@@ -67,7 +68,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         method = request.method
         path = request.url.path
         client_ip = request.client.host if request.client else None
-        user_agent = request.headers.get("user-agent", "")
+        request.headers.get("user-agent", "")
 
         # Process the request and capture body info if needed
         body_info = ""
@@ -110,11 +111,36 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 )
             )
 
+            # Define method color
+            method_color = (
+                "green"
+                if method == "GET"
+                else (
+                    "blue"
+                    if method == "POST"
+                    else (
+                        "yellow"
+                        if method in ["PUT", "PATCH"]
+                        else "red" if method == "DELETE" else "white"
+                    )
+                )
+            )
+
+            # Define status color
+            status_color = (
+                "green"
+                if response.status_code < 300
+                else (
+                    "blue"
+                    if response.status_code < 400
+                    else "yellow" if response.status_code < 500 else "red"
+                )
+            )
+
             # Create a more readable message with rich formatting
             message = (
-                f"[{'green' if method == 'GET' else 'blue' if method == 'POST' else 'yellow' if method in ['PUT', 'PATCH'] else 'red' if method == 'DELETE' else 'white'}]{method}[/] "
-                f"{path} | "
-                f"Status: [{'green' if response.status_code < 300 else 'blue' if response.status_code < 400 else 'yellow' if response.status_code < 500 else 'red'}]{response.status_code}[/] | "
+                f"[{method_color}]{method}[/] {path} | "
+                f"Status: [{status_color}]{response.status_code}[/] | "
                 f"Time: [cyan]{process_time_ms}ms[/] | "
                 f"Client: {client_ip} | "
                 f"ID: [dim]{request_id}[/]{body_info}"
@@ -130,10 +156,24 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             process_time = time.time() - start_time
             process_time_ms = round(process_time * 1000, 2)
 
+            # Define method color
+            method_color = (
+                "green"
+                if method == "GET"
+                else (
+                    "blue"
+                    if method == "POST"
+                    else (
+                        "yellow"
+                        if method in ["PUT", "PATCH"]
+                        else "red" if method == "DELETE" else "white"
+                    )
+                )
+            )
+
             # Create error message with rich formatting
             error_message = (
-                f"[{'green' if method == 'GET' else 'blue' if method == 'POST' else 'yellow' if method in ['PUT', 'PATCH'] else 'red' if method == 'DELETE' else 'white'}]{method}[/] "
-                f"{path} | "
+                f"[{method_color}]{method}[/] {path} | "
                 f"Error: [red]{str(e)}[/] | "
                 f"Time: [cyan]{process_time_ms}ms[/] | "
                 f"Client: {client_ip} | "

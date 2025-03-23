@@ -17,6 +17,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+NETUID_QUERY = Query(None, description="Network UID (subnet ID)")
+HOTKEY_QUERY = Query(None, description="Account public key")
+TRADE_QUERY = Query(
+    False,
+    description="Trigger sentiment analysis and stake/unstake operations",
+)
+
 
 @router.get(
     "",
@@ -33,12 +40,9 @@ router = APIRouter()
     ),
 )
 async def get_tao_dividends(
-    netuid: int = Query(None, description="Network UID (subnet ID)"),
-    hotkey: str = Query(None, description="Account public key"),
-    trade: bool = Query(
-        False,
-        description="Trigger sentiment analysis and stake/unstake operations",
-    ),
+    netuid: int = NETUID_QUERY,
+    hotkey: str = HOTKEY_QUERY,
+    trade: bool = TRADE_QUERY,
     _: str = Depends(get_api_key),
     session: AsyncSession = Depends(get_session),
 ) -> Union[TaoDividend, TaoDividendsBatch]:
