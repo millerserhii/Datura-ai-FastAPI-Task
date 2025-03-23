@@ -26,7 +26,16 @@ logger = logging.getLogger(__name__)
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup code (runs before application starts)
     await init_db()
+
+    # Initialize blockchain wallet
+    from src.blockchain.client import bittensor_client
+
+    bittensor_client.init_wallet()
+
+    logger.info("Application startup complete")
     yield
+    # Shutdown code
+    logger.info("Application shutdown")
 
 
 def create_app() -> FastAPI:

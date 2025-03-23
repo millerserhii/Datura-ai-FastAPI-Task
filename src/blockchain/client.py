@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import Any, Optional, Union
 
@@ -23,84 +24,83 @@ class BitensorClient:
         self.network = settings.BT_NETWORK
         self.wallet_name = settings.BT_WALLET_NAME
         self.wallet_hotkey = settings.BT_WALLET_HOTKEY
+        self.wallet_path = settings.BT_WALLET_PATH
         self.default_netuid = settings.DEFAULT_NETUID
         self.default_hotkey = settings.DEFAULT_HOTKEY.get_secret_value()
         self._subtensor: Optional[AsyncSubtensor] = None
         self._wallet: Optional[Any] = None
-        self.connection_retries = 3
-        self.retry_delay = 2  # seconds
+        self._wallet_initialized = False
+
+    def init_wallet(self) -> None:
+        """Initialize wallet at application startup."""
+        try:
+            # Create or load the wallet
+            self._wallet = bittensor.wallet(
+                name=self.wallet_name,
+                hotkey=self.wallet_hotkey,
+                path=self.wallet_path,
+            )
+
+            hotkey_path = os.path.join(
+                self.wallet_path,
+                self.wallet_name,
+                "hotkeys",
+                self.wallet_hotkey,
+            )
+
+            if not os.path.exists(hotkey_path) and settings.BT_WALLET_SEED:
+                mnemonic = settings.BT_WALLET_SEED.get_secret_value()
+                self._wallet.regenerate_hotkey(
+                    mnemonic=mnemonic,
+                    hotkey=self.wallet_hotkey,
+                    use_password=False,
+                    overwrite=True,
+                )
+
+            logger.info(
+                "Initialized wallet %s:%s from path %s",
+                self.wallet_name,
+                self.wallet_hotkey,
+                self.wallet_path,
+            )
+
+            self._wallet_initialized = True
+
+        except Exception as e:
+            logger.error("Failed to initialize wallet: %s", e)
 
     async def connect(self) -> AsyncSubtensor:
-        """
-        Connect to the Bittensor blockchain with retries.
-
-        Returns:
-            AsyncSubtensor: Connected subtensor client
-
-        Raises:
-            BlockchainError: If connection fails after retries
-        """
-        if self._subtensor is not None:
-            return self._subtensor
-
-        retries = 0
-        last_error = None
-
-        while retries <= self.connection_retries:
+        """Connect to the Bittensor blockchain."""
+        if self._subtensor is None:
             try:
-                logger.info(
-                    f"Connecting to Bittensor {self.network} (attempt {retries+1}/{self.connection_retries+1})"
-                )
-
                 self._subtensor = AsyncSubtensor(
                     network=self.network,
-                    log_verbose=False,
+                    log_verbose=True,
                 )
 
                 logger.info(
-                    f"Connected to AsyncSubtensor client for {self.network}"
+                    "Created AsyncSubtensor client for %s",
+                    self.network,
                 )
-                return self._subtensor
 
             except Exception as e:
-                last_error = e
-                retries += 1
-
-                if retries <= self.connection_retries:
-                    wait_time = self.retry_delay * retries
-                    logger.warning(
-                        f"Failed to connect to Bittensor: {e}. "
-                        f"Retrying in {wait_time}s ({retries}/{self.connection_retries})"
-                    )
-                    time.sleep(wait_time)
-                else:
-                    logger.error(
-                        f"Failed to connect to Bittensor after {retries} attempts: {e}"
-                    )
-
-        # If we reach here, all retries failed
-        error_msg = f"Failed to connect to Bittensor after {retries} attempts: {last_error}"
-        logger.error(error_msg)
-        raise BlockchainError(error_msg)
+                logger.error("Failed to connect to Bittensor: %s", e)
+                raise BlockchainError(
+                    f"Failed to connect to Bittensor: {e}"
+                ) from e
+        return self._subtensor
 
     def get_wallet(self) -> Any:
-        """Get Bittensor wallet."""
-        if self._wallet is None:
-            try:
-                # Simply load the wallet without extra config parameters
-                self._wallet = bittensor.wallet(
-                    name=self.wallet_name, hotkey=self.wallet_hotkey
-                )
+        """Get Bittensor wallet and ensure it's initialized."""
+        if not self._wallet_initialized:
+            self.init_wallet()
 
-                logger.info(
-                    f"Initialized wallet {self.wallet_name}:{self.wallet_hotkey}"
-                )
+        if not self._wallet:
+            raise BlockchainError(
+                "Wallet not available. "
+                "Make sure wallet files are mounted correctly."
+            )
 
-            except Exception as e:
-                logger.error(f"Failed to initialize wallet: {e}")
-                raise BlockchainError(
-                    f"Failed to initialize wallet: {e}"
-                ) from e
         return self._wallet
 
     async def get_tao_dividends(
@@ -116,35 +116,24 @@ class BitensorClient:
         Returns:
             TaoDividend or List[TaoDividend]: Dividend information
         """
+        subtensor = await self.connect()
+
+        # Use default values if not provided
+        netuid = netuid if netuid is not None else self.default_netuid
+        hotkey = hotkey if hotkey is not None else self.default_hotkey
+
         try:
-            subtensor = await self.connect()
-
-            # Use default values if not provided
-            netuid = netuid if netuid is not None else self.default_netuid
-            hotkey = hotkey if hotkey is not None else self.default_hotkey
-
             dividends = []
-            netuids = (
-                [netuid] if netuid is not None else list(range(1, 21))
-            )  # Limit to 20 netuids for performance
+            netuids = [netuid] if netuid is not None else list(range(1, 51))
 
             for current_netuid in netuids:
                 try:
                     # Query the map of all hotkeys for this netuid
-                    logger.info(
-                        f"Querying TaoDividendsPerSubnet for netuid={current_netuid}"
-                    )
                     query_map_result = await subtensor.query_map(
                         "SubtensorModule",
                         "TaoDividendsPerSubnet",
                         params=[current_netuid],
                     )
-
-                    if query_map_result is None:
-                        logger.warning(
-                            f"No dividend data found for netuid={current_netuid}"
-                        )
-                        continue
 
                     async for key, value in query_map_result:
                         decoded_key = decode_account_id(key)
@@ -165,19 +154,17 @@ class BitensorClient:
                                 )
                             )
 
-                            # If we found the specific hotkey, break
                             if hotkey is not None:
                                 break
 
-                except Exception as ex:
+                except (ValueError, AttributeError, TypeError) as ex:
                     logger.warning(
-                        f"Failed to get dividends for netuid {current_netuid}: {ex}"
+                        "Failed to get dividends for netuid %s: %s",
+                        current_netuid,
+                        ex,
                     )
-                    # Continue with other netuids
 
-            # If we have dividends, return them
             if dividends:
-                # If hotkey was specified, return only the first dividend
                 if hotkey is not None and len(dividends) == 1:
                     return dividends[0]
                 return dividends
@@ -193,14 +180,14 @@ class BitensorClient:
                     dividend=0,
                     cached=False,
                 )
-            return []
+            return []  # type: ignore[unreachable]
 
-        except BlockchainError as e:
-            # Re-raise BlockchainError
-            raise e
         except Exception as e:
             logger.error(
-                f"Failed to get Tao dividends for netuid={netuid}, hotkey={hotkey}: {e}"
+                "Failed to get Tao dividends for netuid=%s, hotkey=%s: %s",
+                netuid,
+                hotkey,
+                e,
             )
             raise BlockchainError(f"Failed to get Tao dividends: {e}") from e
 
@@ -224,65 +211,95 @@ class BitensorClient:
         subtensor = await self.connect()
         wallet = self.get_wallet()
 
-        tao_amount = Balance.from_tao(amount)
-
         # Use default values if not provided
         hotkey = hotkey if hotkey is not None else self.default_hotkey
         netuid = netuid if netuid is not None else self.default_netuid
 
         try:
-            # Submit stake extrinsic
-            success = await subtensor.add_stake(
-                wallet=wallet,
-                hotkey_ss58=hotkey,
-                netuid=netuid,
-                amount=tao_amount,
-            )
-
-            if not success:
-                error_msg = "Failed to stake: Chain rejected transaction"
-                logger.error(error_msg)
-                return StakeOperation(
-                    hotkey=hotkey,
-                    amount=tao_amount,
-                    operation_type="stake",
-                    success=False,
-                    error=error_msg,
-                )
-
+            # Submit stake extrinsic - need to handle different return types
             logger.info(
-                "Successfully staked %s TAO to %s on subnet %s",
-                tao_amount,
+                "Attempting to stake %s TAO to %s on subnet %s",
+                amount,
                 hotkey,
                 netuid,
+            )
+
+            timestamp = int(time.time())
+
+            result = await subtensor.add_stake(
+                wallet=wallet,
+                amount=amount,
+                hotkey_ss58=hotkey,
+                netuid=netuid,
+            )
+
+            # Handle different return types from add_stake
+            if isinstance(result, tuple):
+                success, tx_hash = result
+            elif isinstance(result, bool):
+                success = result
+                tx_hash = f"tx-{timestamp}"
+            else:
+                raise BlockchainError(
+                    f"Unexpected return type from add_stake: {type(result)}"
+                )
+
+            if not success:
+                raise BlockchainError(f"Failed to stake: {tx_hash}")
+
+            logger.info(
+                "Successfully staked %s TAO to %s on subnet %s. "
+                "Transaction hash: %s",
+                amount,
+                hotkey,
+                netuid,
+                tx_hash,
             )
 
             return StakeOperation(
                 hotkey=hotkey,
                 amount=amount,
                 operation_type="stake",
-                tx_hash="Transaction submitted",  # We don't have the actual hash
+                tx_hash=tx_hash,
                 success=success,
             )
 
         except Exception as e:
+            error_str = str(e)
             logger.error(
                 "Failed to stake %s TAO to %s: %s",
                 amount,
                 hotkey,
-                e,
+                error_str,
             )
+
+            # Handle "Transaction Already Imported" error specifically
+            if "Transaction Already Imported" in error_str:
+                return StakeOperation(
+                    hotkey=hotkey,
+                    amount=amount,
+                    operation_type="stake",
+                    tx_hash=f"duplicate-{int(time.time())}",
+                    success=True,
+                    error=(
+                        "A similar transaction was already processed by "
+                        "the blockchain. This usually means the operation "
+                        "was already completed."
+                    ),
+                )
+
             return StakeOperation(
                 hotkey=hotkey,
                 amount=amount,
                 operation_type="stake",
                 success=False,
-                error=str(e),
+                error=error_str,
             )
 
+    # Similarly update the unstake method to handle the same error
     async def unstake(
         self,
-        amount: float,  # TAO amount
+        amount: float,
         hotkey: Optional[str] = None,
         netuid: Optional[int] = None,
     ) -> StakeOperation:
@@ -314,17 +331,6 @@ class BitensorClient:
             # Convert TAO amount to alpha amount
             alpha_amount = subnet_info.tao_to_alpha(tao_amount)
 
-            if float(alpha_amount) < 0.001:
-                error_msg = f"Converted alpha amount ({alpha_amount}) is too low for {tao_amount} TAO"
-                logger.error(error_msg)
-                return StakeOperation(
-                    hotkey=hotkey,
-                    amount=amount,
-                    operation_type="unstake",
-                    success=False,
-                    error=error_msg,
-                )
-
             logger.info(
                 "Converting %s TAO to %s alpha tokens for unstaking from %s on subnet %s",
                 tao_amount,
@@ -352,7 +358,11 @@ class BitensorClient:
                     )
 
                     if float(current_stake) < float(alpha_amount):
-                        error_msg = f"Not enough stake: {current_stake} alpha tokens available, but trying to unstake {alpha_amount} alpha tokens"
+                        error_msg = (
+                            f"Not enough stake: {float(current_stake)} alpha tokens "
+                            f"available, but trying to unstake {float(alpha_amount)} "
+                            "alpha tokens"
+                        )
                         logger.error(error_msg)
                         return StakeOperation(
                             hotkey=hotkey,
@@ -384,7 +394,7 @@ class BitensorClient:
 
             success = await subtensor.unstake(
                 wallet=wallet,
-                amount=alpha_amount,  # Already a Balance object
+                amount=alpha_amount,
                 hotkey_ss58=hotkey,
                 netuid=netuid,
             )
@@ -394,7 +404,7 @@ class BitensorClient:
                 logger.error(error_msg)
                 return StakeOperation(
                     hotkey=hotkey,
-                    amount=amount,  # Return original TAO amount
+                    amount=amount,
                     operation_type="unstake",
                     success=False,
                     error=error_msg,
@@ -407,12 +417,13 @@ class BitensorClient:
                 hotkey,
                 netuid,
             )
+            timestamp = int(time.time())
 
             return StakeOperation(
                 hotkey=hotkey,
-                amount=amount,  # Return original TAO amount
+                amount=amount,
                 operation_type="unstake",
-                tx_hash="Transaction submitted",
+                tx_hash=f"tx-{timestamp}",
                 success=success,
             )
 

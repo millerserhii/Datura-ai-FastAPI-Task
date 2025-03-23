@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Create async engine
 engine = create_async_engine(
     str(settings.DATABASE_URL),
-    echo=settings.DEBUG,
+    echo=False,
     future=True,
 )
 

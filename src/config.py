@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     BT_WALLET_NAME: str
     BT_WALLET_HOTKEY: str
     BT_WALLET_SEED: SecretStr
+    BT_WALLET_PATH: str = "/app/wallets"
 
     # External APIs
     DATURA_API_KEY: SecretStr

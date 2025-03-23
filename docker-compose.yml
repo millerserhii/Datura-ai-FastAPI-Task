@@ -22,6 +22,7 @@ services:
       - "8000:8000"
     volumes:
       - ./:/app
+      - ./wallets:/app/wallets:ro
       - /etc/localtime:/etc/localtime:ro
 
   celery_worker:
@@ -34,10 +35,9 @@ services:
       - .env
     environment:
       PYTHONUNBUFFERED: "1"
-      DATURA_API_KEY: ${DATURA_API_KEY}
-      CHUTES_API_KEY: ${CHUTES_API_KEY}
     volumes:
       - ./:/app
+      - ./wallets:/app/wallets:ro
       - /etc/localtime:/etc/localtime:ro
 
   db:

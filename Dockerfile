@@ -17,6 +17,9 @@ RUN apt-get update && apt-get -y install \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
+# Create wallet directory
+RUN mkdir -p /app/wallets && chmod 755 /app/wallets
+
 # Install dependencies
 RUN python -m venv $VIRTUAL_ENV && pip install --no-cache-dir poetry
 COPY pyproject.toml poetry.lock ./
