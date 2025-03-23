@@ -4,24 +4,14 @@ An asynchronous API service that provides authenticated endpoints to query Tao d
 
 ## Features
 
-- 🔑 **Authenticated FastAPI Endpoint**: Secure endpoints for querying Tao dividends
-- 🏭 **Asynchronous Architecture**: Built with asyncio and FastAPI for high concurrency
-- 💾 **Redis Caching**: Caches blockchain query results for 2 minutes
+- 🔐 **Authenticated API**: Secure endpoints for querying Tao dividends
+- ⚡ **Asynchronous Architecture**: Built with asyncio and FastAPI for high concurrency
+- 🗄️ **Redis Caching**: Caches blockchain query results for 2 minutes
 - 🔄 **Background Processing**: Celery workers handle async blockchain and sentiment tasks
 - 📊 **Twitter Sentiment Analysis**: Analyzes tweets for sentiment-based trading decisions
-- 🔗 **Blockchain Integration**: Stakes or unstakes TAO based on sentiment score
-- 🛢️ **Database Persistence**: Stores transaction and dividend history
+- ⛓️ **Blockchain Integration**: Stakes or unstakes TAO based on sentiment score
+- 💾 **Database Persistence**: Stores transaction and dividend history
 - 🐳 **Docker Deployment**: Easy deployment with Docker Compose
-
-## Architecture
-
-This service follows modern async patterns:
-
-- **FastAPI** handles HTTP requests
-- **Redis** serves as cache and message broker
-- **Celery** workers process background tasks
-- **PostgreSQL** with async SQLAlchemy stores results
-- **Docker** containers orchestrate all components
 
 ## Prerequisites
 
@@ -29,70 +19,104 @@ This service follows modern async patterns:
 - A Bittensor wallet with testnet tokens
 - API keys for Datura.ai and Chutes.ai
 
-## Quick Start
+## Setup Instructions
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/millerserhii/Datura-ai-FastAPI-Task.git
-   cd Datura-ai-FastAPI-Task
-   ```
+### 1. Clone the Repository
 
-2. Create a `.env` file from the template:
-   ```bash
-   cp .env.example .env
-   ```
+```bash
+git clone https://github.com/millerserhii/Datura-ai-FastAPI-Task.git
+cd Datura-ai-FastAPI-Task
+```
 
-3. Update the `.env` file with your settings:
-   ```
-   # API
-   API_AUTH_TOKEN=your_api_token_here
+### 2. Configure Environment Variables
 
-   # Database
-   DB_USER=user
-   DB_PASSWORD=password
-   DB_NAME=app
+> **⚠️ IMPORTANT:** You must copy the example environment file to create your own .env file.
 
-   # Redis
-   REDIS_PASSWORD=password
+```bash
+cp .env.example .env
+```
 
-   # Bittensor
-   BT_NETWORK=testnet
-   BT_WALLET_NAME=my_wallet
-   BT_WALLET_HOTKEY=my_hotkey
-   BT_WALLET_SEED=your_wallet_seed_phrase_here
+Edit the `.env` file to include your API keys and configuration:
 
-   # Default parameters
-   DEFAULT_NETUID=18
-   DEFAULT_HOTKEY=<your_default_hotkey_here>
+```
+# API
+API_AUTH_TOKEN=your_api_token_here
 
-   # External APIs
-   DATURA_API_KEY=<your_datura_api_key_here>
-   CHUTES_API_KEY=<your_chutes_api_key_here>
-   ```
+# Database
+DB_USER=user
+DB_PASSWORD=password
+DB_NAME=app
 
-4. Start the services:
-   ```bash
-   docker-compose up --build
-   ```
+# Redis
+REDIS_PASSWORD=password
 
-5. Access the API at http://localhost:8000/api/v1/tao_dividends
+# Bittensor
+BT_NETWORK=test
+BT_WALLET_NAME=my_wallet
+BT_WALLET_HOTKEY=my_hotkey
+BT_WALLET_SEED=your_wallet_seed_phrase_here
+
+# Default parameters
+DEFAULT_NETUID=18
+DEFAULT_HOTKEY='your_hotkey_here'
+
+# External APIs
+DATURA_API_KEY='your_datura_api_key_here'
+CHUTES_API_KEY='your Chutes API key here'
+```
+
+### 3. Set Up Bittensor Wallets
+
+> **⚠️ IMPORTANT:** You must copy your Bittensor wallets to the project directory.
+
+Create a wallets directory and copy your Bittensor wallets:
+
+```bash
+mkdir -p wallets
+cp -r ~/.bittensor/wallets/ .
+```
+
+You may need to adjust permissions:
+
+```bash
+chmod -R 755 wallets/
+# Or assign to your user
+chown -R $(whoami):$(whoami) wallets/
+```
+
+### 4. Start the Application
+
+Build and start all services using Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+To run in the background:
+
+```bash
+docker-compose up --build -d
+```
+
+The application will be available at http://localhost:8000.
 
 ## API Documentation
 
-Once the server is running, visit:
-- Interactive documentation: http://localhost:8000/docs
-- ReDoc documentation: http://localhost:8000/redoc
+Once the server is running, you can access the interactive API documentation:
 
-### Endpoints
+- Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
+- ReDoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
-#### GET /api/v1/tao_dividends
+## Available Endpoints
 
-Returns Tao dividends data for a given subnet and hotkey.
+### GET /api/v1/tao_dividends
+
+Retrieves Tao dividends for the specified subnet and hotkey.
 
 **Query Parameters:**
-- `netuid` (optional): Network UID (subnet ID)
-- `hotkey` (optional): Account public key
-- `trade` (optional, default=false): When true, triggers sentiment analysis and stake/unstake operations
+- `netuid` (optional): Network UID (subnet ID), defaults to value in .env
+- `hotkey` (optional): Account public key, defaults to value in .env
+- `trade` (optional, default: false): Triggers sentiment analysis and stake/unstake operations
 
 **Headers:**
 - `Authorization`: Bearer token for authentication
@@ -115,28 +139,106 @@ curl -X GET "http://localhost:8000/api/v1/tao_dividends?netuid=18&hotkey=5FFApaS
 }
 ```
 
-**Example Batch Response:**
+### POST /api/v1/blockchain/stake
+
+Stakes TAO to a hotkey.
+
+**Request Body:**
 ```json
 {
-  "dividends": [
-    {
-      "netuid": 18,
-      "hotkey": "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v",
-      "dividend": 123456789,
-      "cached": false,
-      "stake_tx_triggered": true,
-      "tx_hash": null
-    },
-    {
-      "netuid": 18,
-      "hotkey": "5G4mxrN8msvc4jjwp7xoBrtAejTfAMLCMTFGCivY5inmySbq",
-      "dividend": 987654321,
-      "cached": false,
-      "stake_tx_triggered": true,
-      "tx_hash": null
-    }
-  ],
-  "cached": false,
-  "stake_tx_triggered": true
+  "amount": 1.5,
+  "netuid": 18,
+  "hotkey": "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v"
 }
+```
+
+### POST /api/v1/blockchain/unstake
+
+Unstakes TAO from a hotkey.
+
+**Request Body:**
+```json
+{
+  "amount": 1.5,
+  "netuid": 18,
+  "hotkey": "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v"
+}
+```
+
+### GET /api/v1/blockchain/dividend-history
+
+Retrieves dividend history.
+
+**Query Parameters:**
+- `netuid` (optional): Filter by Network UID
+- `hotkey` (optional): Filter by hotkey
+- `limit` (optional, default: 100): Maximum records to return
+- `offset` (optional, default: 0): Number of records to skip
+
+### GET /api/v1/blockchain/stake-transaction-history
+
+Retrieves stake transaction history.
+
+**Query Parameters:**
+- `netuid` (optional): Filter by Network UID
+- `hotkey` (optional): Filter by hotkey
+- `operation_type` (optional): Filter by operation type ("stake" or "unstake")
+- `limit` (optional, default: 100): Maximum records to return
+- `offset` (optional, default: 0): Number of records to skip
+
+## Running Tests
+
+To run the tests:
+
+```bash
+pytest
+```
+
+To run specific tests:
+
+```bash
+pytest tests/test_blockchain_service.py
+```
+
+## Health Checks
+
+Check if the API is running:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Check if Celery is working:
+
+```bash
+curl http://localhost:8000/celery-health
+```
+
+## Architecture
+
+This service follows modern async patterns:
+
+- **FastAPI** handles HTTP requests
+- **Redis** serves as cache and message broker
+- **Celery** workers process background tasks
+- **PostgreSQL** with async SQLAlchemy stores results
+- **Docker** containers orchestrate all components
+
+## Troubleshooting
+
+- **Database Connection Issues**: Check PostgreSQL logs with `docker-compose logs db`
+- **Redis Connection Issues**: Verify Redis password in .env file
+- **Wallet Access Problems**: Ensure wallets are copied correctly and have proper permissions
+- **API Authorization Failures**: Verify API_AUTH_TOKEN in .env matches your request
+
+## Shutting Down
+
+```bash
+docker-compose down
+```
+
+To remove volumes (will delete all data):
+
+```bash
+docker-compose down -v
 ```
