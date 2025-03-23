@@ -95,5 +95,5 @@ if __name__ == "__main__":
         port=settings.PORT,
         reload=settings.DEBUG,
         log_level="debug",
-        use_colors=True
+        use_colors=True,
     )
