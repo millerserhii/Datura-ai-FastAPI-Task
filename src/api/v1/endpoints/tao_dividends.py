@@ -84,8 +84,12 @@ async def get_tao_dividends(
 
             try:
                 # Trigger sentiment analysis and stake/unstake as a background task
+                datura_api_key = settings.DATURA_API_KEY.get_secret_value()
+                chutes_api_key = settings.CHUTES_API_KEY.get_secret_value()
                 task = trigger_sentiment_analysis_and_stake.delay(
-                    trigger_netuid
+                    datura_api_key=datura_api_key,
+                    chutes_api_key=chutes_api_key,
+                    netuid=trigger_netuid,
                 )
                 logger.info(
                     f"Triggered sentiment analysis task (ID: {task.id}) for netuid={trigger_netuid}"

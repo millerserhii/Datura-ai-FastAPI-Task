@@ -6,16 +6,19 @@ from typing import Any, Optional
 from src.blockchain.service import get_blockchain_service
 from src.config import settings
 from src.database import async_session
-from src.sentiment.service import sentiment_service
+from src.sentiment.service import SentimentAnalysisService
 from src.tasks.worker import celery_app
 
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="trigger_sentiment_analysis_and_stake")
+@celery_app.task(bind=True, name="trigger_sentiment_analysis_and_stake")
 def trigger_sentiment_analysis_and_stake(
-    self, netuid: Optional[int] = None
+    self,
+    datura_api_key: str,
+    chutes_api_key: str,
+    netuid: Optional[int] = None,
 ) -> dict[str, Any]:
     """
     Task to trigger sentiment analysis and stake/unstake operations.
@@ -48,6 +51,9 @@ def trigger_sentiment_analysis_and_stake(
     async def process_sentiment_and_stake() -> dict[str, Any]:
         try:
             # Get tweets about the subnet
+            sentiment_service = SentimentAnalysisService(
+                datura_api_key=datura_api_key, chutes_api_key=chutes_api_key
+            )
             tweets = await sentiment_service.search_tweets(effective_netuid)
 
             if not tweets:
@@ -69,6 +75,7 @@ def trigger_sentiment_analysis_and_stake(
             sentiment_result = await sentiment_service.analyze_sentiment(
                 tweets, effective_netuid
             )
+            logger.info(sentiment_result)
             sentiment_id = uuid.uuid4()
 
             # Skip staking if sentiment is neutral

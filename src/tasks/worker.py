@@ -1,7 +1,9 @@
 # pylint: disable=unused-import
 import logging
+from pathlib import Path
 
 from celery import Celery
+from dotenv import load_dotenv
 
 from src.config import settings
 
@@ -10,6 +12,8 @@ print("==== WORKER MODULE LOADING ====")
 
 
 logger = logging.getLogger(__name__)
+env_path = Path(".") / ".env"
+load_dotenv(dotenv_path=env_path)
 
 # Explicitly format the Redis URL to ensure proper authentication
 redis_password = settings.REDIS_PASSWORD.get_secret_value()
@@ -52,7 +56,7 @@ celery_app.conf.update(
 
 # Import task modules
 try:
-    from src.tasks import blockchain_tasks, sentiment_tasks, test_task  # noqa
+    from src.tasks import blockchain_tasks, test_task  # noqa
 
     logger.info("Celery worker initialized with tasks")
 except ImportError:

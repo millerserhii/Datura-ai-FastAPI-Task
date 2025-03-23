@@ -26,12 +26,16 @@ services:
 
   celery_worker:
     build: .
-    command: celery -A src.tasks.worker worker --loglevel=info --pool=threads -Q celery,sentiment
+    command: celery -A src.tasks.worker worker --loglevel=info --pool=threads --without-heartbeat --without-mingle
     depends_on:
       api:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DATURA_API_KEY: ${DATURA_API_KEY}
+      CHUTES_API_KEY: ${CHUTES_API_KEY}
     volumes:
       - ./:/app
       - /etc/localtime:/etc/localtime:ro

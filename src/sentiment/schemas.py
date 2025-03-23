@@ -24,3 +24,13 @@ class TweetBatch(BaseModel):
     def __init__(self, **data):
         super().__init__(**data)
         self.count = len(self.tweets)
+
+
+class SentimentResult(BaseModel):
+    """Sentiment analysis result model."""
+
+    netuid: int
+    score: int  # -100 to +100
+    tweets_count: int
+    operation_type: str  # "stake" or "unstake"
+    stake_amount: float
