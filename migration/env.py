@@ -1,21 +1,22 @@
 import asyncio
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from alembic import context
-
 # Import SQLModel and your models
 from sqlmodel import SQLModel
-from src.blockchain.models import StakeTransaction, DividendHistory
+
 
 # this is the Alembic Config object
 config = context.config
 
 # Import settings from main app
 from src.config import settings
+
+
 if not config.get_main_option("sqlalchemy.url"):
     config.set_main_option("sqlalchemy.url", str(settings.DATABASE_URL))
 
@@ -25,6 +26,7 @@ if config.config_file_name is not None:
 
 # Set target metadata to SQLModel.metadata
 target_metadata = SQLModel.metadata
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
@@ -39,14 +41,13 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(
-        connection=connection,
-        target_metadata=target_metadata
-    )
+    context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
         context.run_migrations()
+
 
 async def run_async_migrations() -> None:
     """In this scenario we need to create an Engine
@@ -63,9 +64,11 @@ async def run_async_migrations() -> None:
 
     await connectable.dispose()
 
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     asyncio.run(run_async_migrations())
+
 
 if context.is_offline_mode():
     run_migrations_offline()

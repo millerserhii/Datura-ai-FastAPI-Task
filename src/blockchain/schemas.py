@@ -36,13 +36,3 @@ class StakeOperation(BaseModel):
     tx_hash: Optional[str] = None
     success: bool = False
     error: Optional[str] = None
-
-
-class SentimentResult(BaseModel):
-    """Sentiment analysis result model."""
-
-    netuid: int
-    score: int  # -100 to +100
-    tweets_count: int
-    operation_type: str  # "stake" or "unstake"
-    stake_amount: float

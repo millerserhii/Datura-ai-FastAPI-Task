@@ -41,10 +41,11 @@ class Settings(BaseSettings):
     CACHE_TTL: int = 120  # 2 minutes
 
     # Bittensor
-    BT_NETWORK: str = "testnet"  # or finney
+    BT_NETWORK: str = "test"  # or finney
     BT_WALLET_NAME: str
     BT_WALLET_HOTKEY: str
     BT_WALLET_SEED: SecretStr
+    BT_WALLET_PATH: str = "/app/wallets"
 
     # External APIs
     DATURA_API_KEY: SecretStr
@@ -63,7 +64,6 @@ class Settings(BaseSettings):
                 else self.DB_PASSWORD
             )
 
-
             self.DATABASE_URL = PostgresDsn.build(
                 scheme="postgresql+asyncpg",
                 username=self.DB_USER,
@@ -72,7 +72,6 @@ class Settings(BaseSettings):
                 port=self.DB_PORT,
                 path=self.DB_NAME,
             )
-            print(self.DATABASE_URL)
         return self
 
     @model_validator(mode="after")

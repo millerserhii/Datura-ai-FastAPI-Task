@@ -95,6 +95,8 @@ coverage.xml
 .pytest_cache/
 cover/
 
+wallets/*
+
 # Translations
 *.mo
 *.pot

@@ -11,6 +11,7 @@ from src.config import settings
 from src.database import init_db
 from src.exceptions import CustomException
 from src.middleware import setup_request_logging_middleware
+from src.tasks.test_task import test_task
 
 
 # Configure logging
@@ -25,7 +26,16 @@ logger = logging.getLogger(__name__)
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup code (runs before application starts)
     await init_db()
+
+    # Initialize blockchain wallet
+    from src.blockchain.client import bittensor_client
+
+    bittensor_client.init_wallet()
+
+    logger.info("Application startup complete")
     yield
+    # Shutdown code
+    logger.info("Application shutdown")
 
 
 def create_app() -> FastAPI:
@@ -81,6 +91,14 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/celery-health", tags=["Celery Health"])
+    async def celery_health() -> dict[str, str]:
+        # Test Celery task
+        task = test_task.delay()
+        task_id = task.id
+        logger.info(f"Triggered test task (ID: {task_id})")
+        return {"status": "ok", "task_id": task_id}
+
     return app
 
 
@@ -94,4 +112,6 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=settings.PORT,
         reload=settings.DEBUG,
+        log_level="debug",
+        use_colors=True,
     )

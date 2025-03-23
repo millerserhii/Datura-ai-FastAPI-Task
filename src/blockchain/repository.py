@@ -53,12 +53,6 @@ class BlockchainRepository:
         await self.session.commit()
         await self.session.refresh(transaction)
 
-        logger.info(
-            "Created %s transaction record for hotkey=%s, amount=%s",
-            transaction.operation_type,
-            transaction.hotkey,
-            transaction.amount,
-        )
 
         return transaction
 

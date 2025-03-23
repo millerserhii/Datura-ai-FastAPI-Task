@@ -20,6 +20,7 @@ sqlmodel = "^0.0.24"
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 aiohttp = "^3.11.14"
 bittensor = "9.1.0"
+rich = "^13.9.4"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -40,6 +41,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pylint.main]
+ignore-paths = ["migration"]
 init-hook='import sys; sys.path.append(".")'
 
 [tool.pylint.basic]
@@ -80,7 +82,7 @@ line-length = 79
 max-line-length = 79
 
 [tool.bandit]
-exclude_dirs = ["tests"]
+exclude_dirs = ["tests", "migration"]
 skips = ["B311", "B324", "B104"]
 
 [tool.bandit.assert_used]
@@ -99,7 +101,7 @@ skip_empty = true
 explicit_package_bases = true
 mypy_path = ["."]
 check_untyped_defs = true
-exclude = []
+exclude = ["migration"]
 disallow_any_generics = true
 disallow_incomplete_defs = true
 disallow_untyped_calls = true

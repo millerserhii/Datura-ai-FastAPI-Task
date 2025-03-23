@@ -22,18 +22,22 @@ services:
       - "8000:8000"
     volumes:
       - ./:/app
+      - ./wallets:/app/wallets:ro
       - /etc/localtime:/etc/localtime:ro
 
   celery_worker:
     build: .
-    command: celery -A src.tasks.worker worker --loglevel=info --pool=threads
+    command: celery -A src.tasks.worker worker --loglevel=info --pool=threads --without-heartbeat --without-mingle
     depends_on:
       api:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
     volumes:
       - ./:/app
+      - ./wallets:/app/wallets:ro
       - /etc/localtime:/etc/localtime:ro
 
   db:
