@@ -2,56 +2,25 @@ import logging
 from typing import Optional
 
 import aiohttp
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.exceptions import ExternalAPIError
-from src.sentiment.schemas import SentimentResult
 from src.sentiment.repository import SentimentAnalysisRepository
+from src.sentiment.schemas import SentimentResult, Tweet, TwitterUser
 
 
 logger = logging.getLogger(__name__)
 
 
-class TwitterUser(BaseModel):
-    """Twitter user model."""
-
-    id: str
-    username: str
-    name: str
-    followers_count: int = 0
-    verified: bool = False
-    is_blue_verified: bool = False
-
-
-class Tweet(BaseModel):
-    """Twitter tweet model with engagement metrics."""
-
-    id: str
-    text: str
-    url: str
-    created_at: str
-
-    # User information
-    user: TwitterUser
-
-    # Engagement metrics
-    reply_count: int = 0
-    retweet_count: int = 0
-    like_count: int = 0
-    quote_count: int = 0
-    bookmark_count: int = 0
-
-    # Additional metadata
-    is_quote_tweet: bool = False
-    is_retweet: bool = False
-    lang: str = "en"
-
-
 class SentimentAnalysisService:
     """Service for Twitter sentiment analysis."""
 
-    def __init__(self, datura_api_key: str, chutes_api_key: str, session: Optional[AsyncSession] = None, ):
+    def __init__(
+        self,
+        datura_api_key: str,
+        chutes_api_key: str,
+        session: Optional[AsyncSession] = None,
+    ):
         """Initialize service."""
         self.session = session
         self.datura_api_key = datura_api_key

@@ -1,17 +1,39 @@
 from pydantic import BaseModel, Field
 
 
+class TwitterUser(BaseModel):
+    """Twitter user model."""
+
+    id: str
+    username: str
+    name: str
+    followers_count: int = 0
+    verified: bool = False
+    is_blue_verified: bool = False
+
+
 class Tweet(BaseModel):
-    """Twitter tweet model."""
+    """Twitter tweet model with engagement metrics."""
 
     id: str
     text: str
+    url: str
     created_at: str
-    author_username: str = Field(alias="username")
-    author_id: str = Field(alias="author_id")
 
-    class Config:
-        populate_by_name = True
+    # User information
+    user: TwitterUser
+
+    # Engagement metrics
+    reply_count: int = 0
+    retweet_count: int = 0
+    like_count: int = 0
+    quote_count: int = 0
+    bookmark_count: int = 0
+
+    # Additional metadata
+    is_quote_tweet: bool = False
+    is_retweet: bool = False
+    lang: str = "en"
 
 
 class TweetBatch(BaseModel):
