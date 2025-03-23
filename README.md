@@ -2,6 +2,11 @@
 
 An asynchronous API service that provides authenticated endpoints to query Tao dividends from the Bittensor blockchain, with sentiment-based stake/unstake operations.
 
+
+## Video Overview
+
+[Watch the Video Overview](https://drive.google.com/file/d/1TKX-jQ8IH7TqaO2E6IG1jA96Ah7gLuzL/view?usp=sharing)
+
 ## Features
 
 - 🔐 **Authenticated API**: Secure endpoints for querying Tao dividends
