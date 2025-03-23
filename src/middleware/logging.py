@@ -6,8 +6,20 @@ from collections.abc import Callable
 from typing import Any, Optional
 
 from fastapi import FastAPI, Request, Response
+from rich.console import Console
+from rich.logging import RichHandler
 from starlette.middleware.base import BaseHTTPMiddleware
 
+# Set up rich console
+console = Console()
+
+# Configure logger with rich handler
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    datefmt="[%X]",
+    handlers=[RichHandler(rich_tracebacks=True, console=console)]
+)
 
 logger = logging.getLogger("api.request")
 
@@ -55,7 +67,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         method = request.method
         path = request.url.path
         client_ip = request.client.host if request.client else None
-        request.headers.get("user-agent", "")
+        user_agent = request.headers.get("user-agent", "")
 
         # Process the request and capture body info if needed
         body_info = ""
@@ -98,15 +110,18 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 )
             )
 
-            # Log a single entry with all the information
-            logger.log(  # pylint: disable=W1203
-                log_level,
-                f"{method} {path} | "
-                f"Status: {response.status_code} | "
-                f"Time: {process_time_ms}ms | "
+            # Create a more readable message with rich formatting
+            message = (
+                f"[{'green' if method == 'GET' else 'blue' if method == 'POST' else 'yellow' if method in ['PUT', 'PATCH'] else 'red' if method == 'DELETE' else 'white'}]{method}[/] "
+                f"{path} | "
+                f"Status: [{'green' if response.status_code < 300 else 'blue' if response.status_code < 400 else 'yellow' if response.status_code < 500 else 'red'}]{response.status_code}[/] | "
+                f"Time: [cyan]{process_time_ms}ms[/] | "
                 f"Client: {client_ip} | "
-                f"ID: {request_id}{body_info}",
+                f"ID: [dim]{request_id}[/]{body_info}"
             )
+
+            # Log with rich formatting
+            logger.log(log_level, message)
 
             return response
 
@@ -115,14 +130,18 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             process_time = time.time() - start_time
             process_time_ms = round(process_time * 1000, 2)
 
-            # Log exception as a single entry
-            logger.exception(  # pylint: disable=W1203
-                f"{method} {path} | "
-                f"Error: {str(e)} | "
-                f"Time: {process_time_ms}ms | "
+            # Create error message with rich formatting
+            error_message = (
+                f"[{'green' if method == 'GET' else 'blue' if method == 'POST' else 'yellow' if method in ['PUT', 'PATCH'] else 'red' if method == 'DELETE' else 'white'}]{method}[/] "
+                f"{path} | "
+                f"Error: [red]{str(e)}[/] | "
+                f"Time: [cyan]{process_time_ms}ms[/] | "
                 f"Client: {client_ip} | "
-                f"ID: {request_id}{body_info}"
+                f"ID: [dim]{request_id}[/]{body_info}"
             )
+
+            # Log exception with rich formatting
+            logger.error(error_message, exc_info=True)
 
             # Re-raise to let FastAPI handle the exception
             raise

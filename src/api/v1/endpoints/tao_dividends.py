@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional, Union
+import logging
+from typing import Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,9 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.dependencies import get_api_key
 from src.blockchain.schemas import TaoDividend, TaoDividendsBatch
 from src.blockchain.service import get_blockchain_service
+from src.config import settings
 from src.database import get_session
 from src.exceptions import BlockchainError
 from src.tasks.blockchain_tasks import trigger_sentiment_analysis_and_stake
+
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -28,8 +33,8 @@ router = APIRouter()
     ),
 )
 async def get_tao_dividends(
-    netuid: Optional[int] = Query(None, description="Network UID (subnet ID)"),
-    hotkey: Optional[str] = Query(None, description="Account public key"),
+    netuid: int = Query(None, description="Network UID (subnet ID)"),
+    hotkey: str = Query(None, description="Account public key"),
     trade: bool = Query(
         False,
         description="Trigger sentiment analysis and stake/unstake operations",
@@ -54,27 +59,64 @@ async def get_tao_dividends(
         # Get blockchain service with database session
         service = await get_blockchain_service(session)
 
+        # Apply default values if not provided
+        effective_netuid = netuid if netuid is not None else None
+        effective_hotkey = hotkey if hotkey is not None else None
+
         # Get Tao dividends
-        result = await service.get_tao_dividends(netuid, hotkey)
+        result = await service.get_tao_dividends(
+            effective_netuid, effective_hotkey
+        )
 
-        # If trade is enabled, trigger sentiment
-        # analysis and stake/unstake operations
+        # If trade is enabled, trigger sentiment analysis and stake/unstake operations
         if trade:
-            # Use default values if not provided
-            trigger_netuid = netuid if netuid is not None else None
+            # Use default netuid if not provided
+            trigger_netuid = (
+                effective_netuid
+                if effective_netuid is not None
+                else settings.DEFAULT_NETUID
+            )
 
-            # Trigger sentiment analysis and stake/unstake as a background task
-            trigger_sentiment_analysis_and_stake.delay(trigger_netuid)
+            try:
+                # Trigger sentiment analysis and stake/unstake as a background task
+                task = trigger_sentiment_analysis_and_stake.delay(
+                    trigger_netuid
+                )
+                logger.info(
+                    f"Triggered sentiment analysis task (ID: {task.id}) for netuid={trigger_netuid}"
+                )
 
-            # Mark stake_tx_triggered as True
-            if isinstance(result, TaoDividendsBatch):
-                result.stake_tx_triggered = True
-                for dividend in result.dividends:
-                    dividend.stake_tx_triggered = True
-            else:
-                result.stake_tx_triggered = True
+                # Mark stake_tx_triggered as True
+                if isinstance(result, TaoDividendsBatch):
+                    result.stake_tx_triggered = True
+                    for dividend in result.dividends:
+                        dividend.stake_tx_triggered = True
+                else:
+                    result.stake_tx_triggered = True
+
+            except ConnectionError as e:
+                # Handle connection errors gracefully
+                logger.error(f"Failed to connect to Celery broker: {str(e)}")
+                # Still return data even if background task fails
+                if isinstance(result, TaoDividendsBatch):
+                    result.stake_tx_triggered = False
+                    for dividend in result.dividends:
+                        dividend.stake_tx_triggered = False
+                else:
+                    result.stake_tx_triggered = False
+
+            except Exception as e:
+                # Handle other task-related errors
+                logger.error(
+                    f"Error triggering sentiment analysis task: {str(e)}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error triggering sentiment analysis task: {str(e)}",
+                ) from e
 
         return result
+
     except BlockchainError as e:
         # Re-raise as HTTPException with appropriate status code
         raise HTTPException(
@@ -83,6 +125,7 @@ async def get_tao_dividends(
         ) from e
     except Exception as e:
         # Handle unexpected errors
+        logger.exception(f"Unexpected error in get_tao_dividends: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred: {str(e)}",

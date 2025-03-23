@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     CACHE_TTL: int = 120  # 2 minutes
 
     # Bittensor
-    BT_NETWORK: str = "testnet"  # or finney
+    BT_NETWORK: str = "test"  # or finney
     BT_WALLET_NAME: str
     BT_WALLET_HOTKEY: str
     BT_WALLET_SEED: SecretStr
@@ -62,7 +62,6 @@ class Settings(BaseSettings):
                 if isinstance(self.DB_PASSWORD, SecretStr)
                 else self.DB_PASSWORD
             )
-
 
             self.DATABASE_URL = PostgresDsn.build(
                 scheme="postgresql+asyncpg",
