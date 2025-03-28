@@ -3,7 +3,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    command: >
+      uvicorn src.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 4
+      --limit-concurrency 1000
+      --backlog 2048
+      --timeout-keep-alive 120
+      --proxy-headers
     depends_on:
       db:
         condition: service_healthy
@@ -27,7 +35,15 @@ services:
 
   celery_worker:
     build: .
-    command: celery -A src.tasks.worker worker --loglevel=info --pool=threads --without-heartbeat --without-mingle
+    command: >
+      celery -A src.tasks.worker worker
+      --loglevel=info
+      --pool=threads
+      --without-heartbeat
+      --without-mingle
+      --concurrency=16
+      --max-tasks-per-child=1000
+      --prefetch-multiplier=1
     depends_on:
       api:
         condition: service_healthy

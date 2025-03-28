@@ -13,13 +13,17 @@ from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Create async engine
+
 engine = create_async_engine(
     str(settings.DATABASE_URL),
     echo=False,
     future=True,
+    pool_size=20,
+    max_overflow=40,
+    pool_timeout=60,
+    pool_recycle=300,
+    pool_pre_ping=True,
 )
-
 async_session = async_sessionmaker(
     bind=engine,
     expire_on_commit=False,
