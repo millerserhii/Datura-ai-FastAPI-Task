@@ -205,6 +205,47 @@ To run specific tests:
 pytest tests/test_blockchain_service.py
 ```
 
+## Load Testing
+
+The project includes a Python-based load testing tool that simulates high concurrency to evaluate the API's performance under load.
+
+### Running the Load Test
+
+```bash
+# Basic usage (automatically reads API key from config)
+python load_test.py --host http://localhost:8000 --users 1000 --duration 60
+```
+
+### Key Features
+
+- **Concurrency**: Uses asyncio to simulate 1000 concurrent users from a single process
+- **Request Mix**:
+  - Randomized netuid and hotkey parameters from predefined test values
+  - 10% of requests use trade=true to test the sentiment analysis pipeline
+  - Tests both cached and non-cached response paths
+
+### Parameters
+
+```bash
+python load_test.py \
+  --host http://localhost:8000 \
+  --path /api/v1/tao_dividends \
+  --users 1000 \  # Number of concurrent users
+  --spawn-rate 50 \  # Users per second
+  --duration 60  # Test duration in seconds
+```
+
+### Metrics Collected
+
+- Request throughput (requests/sec)
+- Response times (avg/min/max)
+- Success ratio and error distribution
+- Cache hit ratio
+- Status code distribution
+
+The load test helps ensure the API can handle the required 1000 concurrent requests with acceptable response times and stability.
+
+
 ## Health Checks
 
 Check if the API is running:
